@@ -33,22 +33,10 @@ This approach:
 
 ```
 MMM-Assignment/
-│
-├── README.md                 # This file
-├── requirements.txt          # Python dependencies
-├── app.py                   # Main Streamlit dashboard
-├── generate_dataset.py      # Data generation script
-├── notebooks/
-│   └── mmm_analysis.ipynb   # Detailed analysis notebook
-├── data/
-│   └── MMM Weekly.csv       # Dataset (2 years, weekly)
-├── models/
-│   ├── stage1_model.json    # Saved XGBoost model (Stage 1)
-│   └── stage2_model.json    # Saved XGBoost model (Stage 2)
-└── results/
-    ├── model_diagnostics.png
-    ├── feature_importance.png
-    └── scenario_analysis.png
+├── README.md              ✅ Comprehensive documentation with screenshots
+├── requirements.txt       ✅ Updated dependencies  
+├── app.py                ✅ Your Streamlit dashboard
+└── generate_dataset.py   ✅ Sample data generator
 ```
 
 ---

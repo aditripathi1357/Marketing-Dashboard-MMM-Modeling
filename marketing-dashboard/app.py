@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import numpy as np
 import time
+from scipy import stats
 
 # Configure page with custom theme
 st.set_page_config(
@@ -306,6 +307,11 @@ def load_and_process_data():
         google_df = pd.read_csv('Google.csv')
         tiktok_df = pd.read_csv('TikTok.csv')
         
+        # Rename 'impression' to 'impressions' and 'attributed revenue' to 'attributed_revenue'
+        facebook_df = facebook_df.rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
+        google_df = google_df.rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
+        tiktok_df = tiktok_df.rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
+        
         # Add channel column to each dataset
         facebook_df['channel'] = 'Facebook'
         google_df['channel'] = 'Google'
@@ -324,11 +330,16 @@ def load_and_process_data():
         # Join marketing and business data on date
         combined_df = marketing_df.merge(business_df, on='date', how='left')
         
+        # Ensure numeric columns and handle missing values
+        numeric_cols = ['impressions', 'clicks', 'spend', 'attributed_revenue', 'total revenue', 'gross profit', 'COGS', 'new customers']
+        for col in numeric_cols:
+            combined_df[col] = pd.to_numeric(combined_df[col], errors='coerce')
+        
         # Create derived metrics
         combined_df['CTR'] = combined_df['clicks'] / combined_df['impressions']
         combined_df['ROAS'] = combined_df['attributed_revenue'] / combined_df['spend']
-        combined_df['Profit_Margin'] = combined_df['gross_profit'] / combined_df['total_revenue']
-        combined_df['CAC'] = combined_df['spend'] / combined_df['new_customers']
+        combined_df['Profit_Margin'] = combined_df['gross profit'] / combined_df['total revenue']
+        combined_df['CAC'] = combined_df['spend'] / combined_df['new customers']
         
         # Handle infinite and NaN values
         combined_df = combined_df.replace([np.inf, -np.inf], np.nan)
@@ -350,7 +361,7 @@ def create_animated_kpi_cards(df):
     # Calculate KPIs
     total_spend = df['spend'].sum()
     total_attributed_revenue = df['attributed_revenue'].sum()
-    total_profit = df['gross_profit'].sum()
+    total_profit = df['gross profit'].sum()
     avg_cac = df['CAC'].mean()
     avg_roas = df['ROAS'].mean()
     
@@ -526,7 +537,6 @@ def main():
         
         if show_trends:
             # Add trend lines
-            from scipy import stats
             if len(daily_data) > 1:
                 x_numeric = pd.to_numeric(daily_data['date'])
                 slope_spend, intercept_spend, r_spend, p_spend, std_err_spend = stats.linregress(x_numeric, daily_data['spend'])
@@ -579,7 +589,7 @@ def main():
         # Enhanced Orders & Profit Trend
         business_daily = filtered_df.groupby('date').agg({
             'orders': 'first',
-            'gross_profit': 'first'
+            'gross profit': 'first'
         }).reset_index()
         
         fig3 = go.Figure()
@@ -595,7 +605,7 @@ def main():
         ))
         fig3.add_trace(go.Scatter(
             x=business_daily['date'],
-            y=business_daily['gross_profit'],
+            y=business_daily['gross profit'],
             mode='lines+markers',
             name='💎 Profit',
             line=dict(color='#96ceb4', width=3),
@@ -680,8 +690,8 @@ def main():
     with tab3:
         st.markdown("### 🔍 Detailed Raw Data")
         display_columns = ['date', 'channel', 'campaign', 'spend', 'impressions', 
-                          'clicks', 'attributed_revenue', 'orders', 'total_revenue', 
-                          'gross_profit', 'CTR', 'ROAS']
+                          'clicks', 'attributed_revenue', 'orders', 'total revenue', 
+                          'gross profit', 'CTR', 'ROAS']
         
         # Add search and filter options
         search_term = st.text_input("🔍 Search campaigns:", placeholder="Enter campaign name...")
