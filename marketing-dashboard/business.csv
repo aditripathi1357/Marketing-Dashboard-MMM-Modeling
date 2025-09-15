@@ -1,4 +1,4 @@
-date,# of orders,# of new orders,new customers,total revenue,gross profit,COGS
+date,orders,new orders,new customers,total revenue,gross profit,COGS
 2025-05-16,2452,987,989,238010.95,124434.71,113576.24
 2025-05-17,2173,772,761,224086.4,126119.02,97967.38
 2025-05-18,2749,1275,1192,226582.57,128282.08,98300.49
