@@ -408,7 +408,7 @@ def create_modern_chart(fig, title, icon="📊"):
         margin=dict(l=20, r=20, t=20, b=20)
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 def main():
     # Animated Header
@@ -665,7 +665,7 @@ def main():
             'ROAS': ['mean', 'std']
         }).round(2)
         
-        st.dataframe(summary_stats, use_container_width=True)
+        st.dataframe(summary_stats, width='stretch')
     
     with tab2:
         st.markdown("### 📈 Key Performance Metrics")

@@ -129,6 +129,11 @@ class MMMPipelineXGB:
             if feat in df.columns:
                 feature_cols.append(feat)
         
+        adstock_cols = [f'{col}_adstock' for col in ['facebook_spend', 'tiktok_spend', 'snapchat_spend']]
+        for feat in adstock_cols:
+            if feat in df.columns:
+                feature_cols.append(feat)
+        
         # Filter available features
         self.feature_names_stage1 = [col for col in feature_cols if col in df.columns]
         
@@ -640,6 +645,10 @@ if uploaded_file is not None:
             # Recalculate log transforms and features
             for col in ['facebook_spend', 'tiktok_spend', 'snapchat_spend']:
                 df_scenario[f'{col}_log'] = np.log1p(df_scenario[col])
+                df_scenario[f'{col}_adstock'] = df_scenario[col].ewm(alpha=0.3).mean()
+            
+            df_scenario['social_total_log'] = df_scenario['facebook_spend_log'] + df_scenario['tiktok_spend_log'] + df_scenario['snapchat_spend_log']
+            df_scenario['fb_tiktok_interaction'] = df_scenario['facebook_spend_log'] * df_scenario['tiktok_spend_log']
             
             # Predict new outcomes
             X_scenario_s1 = df_scenario[mmm.feature_names_stage1].values
@@ -824,6 +833,10 @@ if uploaded_file is not None:
                     # Recalculate features
                     for col in ['facebook_spend', 'tiktok_spend', 'snapchat_spend']:
                         df_temp[f'{col}_log'] = np.log1p(df_temp[col])
+                        df_temp[f'{col}_adstock'] = df_temp[col].ewm(alpha=0.3).mean()
+                    
+                    df_temp['social_total_log'] = df_temp['facebook_spend_log'] + df_temp['tiktok_spend_log'] + df_temp['snapchat_spend_log']
+                    df_temp['fb_tiktok_interaction'] = df_temp['facebook_spend_log'] * df_temp['tiktok_spend_log']
                     
                     # Predict
                     X_temp_s1 = df_temp[mmm.feature_names_stage1].values
