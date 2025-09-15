@@ -68,7 +68,7 @@ streamlit run app.py
 ### Overview
 An interactive BI dashboard analyzing 120 days of marketing and business activity across Facebook, Google, and TikTok channels. Transforms raw marketing data into actionable business insights.
 
-![Marketing Dashboard](https://via.placeholder.com/800x400/6366f1/ffffff?text=Marketing+Intelligence+Dashboard)
+![Marketing Dashboard](https://drive.google.com/file/d/1iLW2v_76AoGstJDug_5acMKGLxGxsn4y/view?usp=drive_link)
 *Interactive dashboard showing KPIs, performance analytics, and trend analysis*
 
 ### Key Features
@@ -142,7 +142,7 @@ streamlit run app.py
 ### Overview
 A sophisticated two-stage XGBoost model implementing causal mediation analysis. Models the assumption that social media spend drives search intent, which influences Google spend, ultimately leading to revenue.
 
-![MMM Dashboard](https://via.placeholder.com/800x400/8b5cf6/ffffff?text=Advanced+Marketing+Mix+Model+Dashboard)
+![MMM Dashboard](https://drive.google.com/file/d/1LX0vRAB0PKo0ACWoBCqIhDHKZit0iBnF/view?usp=drive_link)
 *Two-stage XGBoost MMM with enhanced analytics and scenario planning*
 
 ### Model Architecture
