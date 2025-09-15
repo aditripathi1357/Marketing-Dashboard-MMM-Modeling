@@ -303,9 +303,9 @@ def load_and_process_data():
         time.sleep(1)
         
         # Load individual marketing channel data
-        facebook_df = pd.read_csv('Facebook.csv')
-        google_df = pd.read_csv('Google.csv')
-        tiktok_df = pd.read_csv('TikTok.csv')
+        facebook_df = pd.read_csv('marketing-dashboard/Facebook.csv')
+        google_df = pd.read_csv('marketing-dashboard/Google.csv')
+        tiktok_df = pd.read_csv('marketing-dashboard/TikTok.csv')
         
         # Rename 'impression' to 'impressions' and 'attributed revenue' to 'attributed_revenue'
         facebook_df = facebook_df.rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
@@ -321,7 +321,7 @@ def load_and_process_data():
         marketing_df = pd.concat([facebook_df, google_df, tiktok_df], ignore_index=True)
         
         # Load business data
-        business_df = pd.read_csv('Business.csv')
+        business_df = pd.read_csv('marketing-dashboard/Business.csv')
         
         # Convert date columns to datetime
         marketing_df['date'] = pd.to_datetime(marketing_df['date'])
