@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import time
 from scipy import stats
+import os
 
 # Configure page with custom theme
 st.set_page_config(
@@ -285,8 +286,43 @@ st.markdown("""
             transform: translateX(0);
         }
     }
+    
+    /* Error message styling */
+    .error-message {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        text-align: center;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+def get_file_path(filename):
+    """Get the correct file path for CSV files"""
+    # Check if file exists in current directory
+    if os.path.exists(filename):
+        return filename
+    
+    # Check common possible locations
+    possible_paths = [
+        filename,
+        f"./{filename}",
+        f"./data/{filename}",
+        f"./marketing-dashboard/{filename}",
+        f"../marketing-dashboard/{filename}",
+        os.path.join(os.getcwd(), filename),
+        os.path.join(os.path.dirname(__file__), filename),
+        os.path.join(os.path.dirname(__file__), "data", filename),
+        os.path.join(os.path.dirname(__file__), "marketing-dashboard", filename)
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None
 
 @st.cache_data
 def load_and_process_data():
@@ -302,10 +338,38 @@ def load_and_process_data():
         # Simulate loading time for dramatic effect
         time.sleep(1)
         
+        # Define required files
+        required_files = ['Facebook.csv', 'Google.csv', 'TikTok.csv', 'Business.csv']
+        file_paths = {}
+        missing_files = []
+        
+        # Check for file existence
+        for filename in required_files:
+            file_path = get_file_path(filename)
+            if file_path:
+                file_paths[filename] = file_path
+                st.success(f"✅ Found {filename} at: {file_path}")
+            else:
+                missing_files.append(filename)
+        
+        if missing_files:
+            loading_placeholder.empty()
+            st.error("🚨 Missing required CSV files:")
+            for file in missing_files:
+                st.error(f"❌ {file}")
+            
+            st.info("📁 Current working directory: " + os.getcwd())
+            st.info("📂 Available files in current directory:")
+            current_files = [f for f in os.listdir('.') if f.endswith('.csv')]
+            for file in current_files:
+                st.info(f"📄 {file}")
+            
+            return None, None, None
+        
         # Load individual marketing channel data
-        facebook_df = pd.read_csv('marketing-dashboard/Facebook.csv')
-        google_df = pd.read_csv('marketing-dashboard/Google.csv')
-        tiktok_df = pd.read_csv('marketing-dashboard/TikTok.csv')
+        facebook_df = pd.read_csv(file_paths['Facebook.csv'])
+        google_df = pd.read_csv(file_paths['Google.csv'])
+        tiktok_df = pd.read_csv(file_paths['TikTok.csv'])
         
         # Rename 'impression' to 'impressions' and 'attributed revenue' to 'attributed_revenue'
         facebook_df = facebook_df.rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
@@ -321,7 +385,7 @@ def load_and_process_data():
         marketing_df = pd.concat([facebook_df, google_df, tiktok_df], ignore_index=True)
         
         # Load business data
-        business_df = pd.read_csv('marketing-dashboard/Business.csv')
+        business_df = pd.read_csv(file_paths['Business.csv'])
         
         # Convert date columns to datetime
         marketing_df['date'] = pd.to_datetime(marketing_df['date'])
@@ -333,7 +397,8 @@ def load_and_process_data():
         # Ensure numeric columns and handle missing values
         numeric_cols = ['impressions', 'clicks', 'spend', 'attributed_revenue', 'total revenue', 'gross profit', 'COGS', 'new customers']
         for col in numeric_cols:
-            combined_df[col] = pd.to_numeric(combined_df[col], errors='coerce')
+            if col in combined_df.columns:
+                combined_df[col] = pd.to_numeric(combined_df[col], errors='coerce')
         
         # Create derived metrics
         combined_df['CTR'] = combined_df['clicks'] / combined_df['impressions']
@@ -350,20 +415,58 @@ def load_and_process_data():
         return combined_df, marketing_df, business_df
     
     except FileNotFoundError as e:
-        st.error(f"🚨 CSV file not found: {e}")
+        st.markdown(f'<div class="error-message">🚨 CSV file not found: {str(e)}<br>Please ensure all required CSV files are uploaded to your Streamlit app.</div>', unsafe_allow_html=True)
         return None, None, None
     except Exception as e:
-        st.error(f"⚠️ Error loading data: {e}")
+        st.markdown(f'<div class="error-message">⚠️ Error loading data: {str(e)}</div>', unsafe_allow_html=True)
         return None, None, None
+
+def create_sample_data():
+    """Create sample data if CSV files are not available"""
+    st.info("🔧 Creating sample data for demonstration...")
+    
+    # Create sample date range
+    date_range = pd.date_range(start='2024-01-01', end='2024-03-31', freq='D')
+    
+    # Create sample marketing data
+    channels = ['Facebook', 'Google', 'TikTok']
+    sample_data = []
+    
+    for date in date_range:
+        for channel in channels:
+            sample_data.append({
+                'date': date,
+                'channel': channel,
+                'campaign': f'{channel}_Campaign_{np.random.randint(1, 5)}',
+                'impressions': np.random.randint(1000, 10000),
+                'clicks': np.random.randint(50, 500),
+                'spend': np.random.uniform(100, 1000),
+                'attributed_revenue': np.random.uniform(200, 1500),
+                'orders': np.random.randint(1, 50),
+                'total revenue': np.random.uniform(500, 2000),
+                'gross profit': np.random.uniform(100, 800),
+                'COGS': np.random.uniform(100, 500),
+                'new customers': np.random.randint(1, 20)
+            })
+    
+    combined_df = pd.DataFrame(sample_data)
+    
+    # Create derived metrics
+    combined_df['CTR'] = combined_df['clicks'] / combined_df['impressions']
+    combined_df['ROAS'] = combined_df['attributed_revenue'] / combined_df['spend']
+    combined_df['Profit_Margin'] = combined_df['gross profit'] / combined_df['total revenue']
+    combined_df['CAC'] = combined_df['spend'] / combined_df['new customers']
+    
+    return combined_df, combined_df, combined_df
 
 def create_animated_kpi_cards(df):
     """Create animated KPI summary cards with modern design"""
     # Calculate KPIs
     total_spend = df['spend'].sum()
     total_attributed_revenue = df['attributed_revenue'].sum()
-    total_profit = df['gross profit'].sum()
-    avg_cac = df['CAC'].mean()
-    avg_roas = df['ROAS'].mean()
+    total_profit = df['gross profit'].sum() if 'gross profit' in df.columns else 0
+    avg_cac = df['CAC'].mean() if 'CAC' in df.columns else 0
+    avg_roas = df['ROAS'].mean() if 'ROAS' in df.columns else 0
     
     # Create 5-column layout for KPI cards
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -419,18 +522,80 @@ def main():
         </div>
     """, unsafe_allow_html=True)
     
-    # Load data
-    combined_df, marketing_df, business_df = load_and_process_data()
+    # File uploader section
+    st.markdown("### 📁 Data Source")
     
-    if combined_df is None:
-        st.error("🚨 Failed to load data. Please ensure all CSV files are in the correct directory.")
-        st.info("📋 Expected files: Facebook.csv, Google.csv, TikTok.csv, Business.csv")
-        return
+    # Option to upload files
+    uploaded_files = st.file_uploader(
+        "Upload your CSV files (Facebook.csv, Google.csv, TikTok.csv, Business.csv)",
+        accept_multiple_files=True,
+        type=['csv'],
+        help="Upload all 4 required CSV files to see your actual data"
+    )
+    
+    # Process uploaded files
+    if uploaded_files:
+        file_names = [f.name for f in uploaded_files]
+        required_files = ['Facebook.csv', 'Google.csv', 'TikTok.csv', 'Business.csv']
+        
+        if all(req_file in file_names for req_file in required_files):
+            st.success("✅ All required files uploaded successfully!")
+            
+            # Process uploaded files
+            try:
+                # Save uploaded files temporarily and process them
+                facebook_df = pd.read_csv(next(f for f in uploaded_files if f.name == 'Facebook.csv'))
+                google_df = pd.read_csv(next(f for f in uploaded_files if f.name == 'Google.csv'))
+                tiktok_df = pd.read_csv(next(f for f in uploaded_files if f.name == 'TikTok.csv'))
+                business_df = pd.read_csv(next(f for f in uploaded_files if f.name == 'Business.csv'))
+                
+                # Process data similar to the original function
+                facebook_df = facebook_df.rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
+                google_df = google_df.rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
+                tiktok_df = tiktok_df.rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
+                
+                facebook_df['channel'] = 'Facebook'
+                google_df['channel'] = 'Google'
+                tiktok_df['channel'] = 'TikTok'
+                
+                marketing_df = pd.concat([facebook_df, google_df, tiktok_df], ignore_index=True)
+                marketing_df['date'] = pd.to_datetime(marketing_df['date'])
+                business_df['date'] = pd.to_datetime(business_df['date'])
+                
+                combined_df = marketing_df.merge(business_df, on='date', how='left')
+                
+                # Process numeric columns
+                numeric_cols = ['impressions', 'clicks', 'spend', 'attributed_revenue', 'total revenue', 'gross profit', 'COGS', 'new customers']
+                for col in numeric_cols:
+                    if col in combined_df.columns:
+                        combined_df[col] = pd.to_numeric(combined_df[col], errors='coerce')
+                
+                # Create derived metrics
+                combined_df['CTR'] = combined_df['clicks'] / combined_df['impressions']
+                combined_df['ROAS'] = combined_df['attributed_revenue'] / combined_df['spend']
+                combined_df['Profit_Margin'] = combined_df['gross profit'] / combined_df['total revenue']
+                combined_df['CAC'] = combined_df['spend'] / combined_df['new customers']
+                combined_df = combined_df.replace([np.inf, -np.inf], np.nan)
+                
+            except Exception as e:
+                st.error(f"Error processing uploaded files: {str(e)}")
+                combined_df, marketing_df, business_df = create_sample_data()
+        else:
+            missing = [f for f in required_files if f not in file_names]
+            st.warning(f"Missing files: {', '.join(missing)}. Using sample data for now.")
+            combined_df, marketing_df, business_df = create_sample_data()
+    else:
+        # Try to load from filesystem first, then use sample data
+        combined_df, marketing_df, business_df = load_and_process_data()
+        
+        if combined_df is None:
+            st.info("📊 Using sample data for demonstration. Upload your CSV files above to see your actual data.")
+            combined_df, marketing_df, business_df = create_sample_data()
     
     # Success message
     st.markdown("""
         <div class="success-message">
-            ✅ Data loaded successfully! Dashboard is ready for analysis.
+            ✅ Dashboard is ready for analysis!
         </div>
     """, unsafe_allow_html=True)
     
@@ -535,21 +700,19 @@ def main():
             hovermode='x unified'
         )
         
-        if show_trends:
+        if show_trends and len(daily_data) > 1:
             # Add trend lines
-            if len(daily_data) > 1:
-                x_numeric = pd.to_numeric(daily_data['date'])
-                slope_spend, intercept_spend, r_spend, p_spend, std_err_spend = stats.linregress(x_numeric, daily_data['spend'])
-                slope_revenue, intercept_revenue, r_revenue, p_revenue, std_err_revenue = stats.linregress(x_numeric, daily_data['attributed_revenue'])
-                
-                fig1.add_trace(go.Scatter(
-                    x=daily_data['date'],
-                    y=slope_spend * x_numeric + intercept_spend,
-                    mode='lines',
-                    name='Spend Trend',
-                    line=dict(color='#ff6b6b', dash='dash', width=2),
-                    opacity=0.7
-                ))
+            x_numeric = pd.to_numeric(daily_data['date'])
+            slope_spend, intercept_spend, r_spend, p_spend, std_err_spend = stats.linregress(x_numeric, daily_data['spend'])
+            
+            fig1.add_trace(go.Scatter(
+                x=daily_data['date'],
+                y=slope_spend * x_numeric + intercept_spend,
+                mode='lines',
+                name='Spend Trend',
+                line=dict(color='#ff6b6b', dash='dash', width=2),
+                opacity=0.7
+            ))
         
         create_modern_chart(fig1, "Daily Spend vs Revenue Trends", "💰")
     
@@ -587,42 +750,77 @@ def main():
     
     with col3:
         # Enhanced Orders & Profit Trend
-        business_daily = filtered_df.groupby('date').agg({
-            'orders': 'first',
-            'gross profit': 'first'
-        }).reset_index()
+        if 'orders' in filtered_df.columns and 'gross profit' in filtered_df.columns:
+            business_daily = filtered_df.groupby('date').agg({
+                'orders': 'first',
+                'gross profit': 'first'
+            }).reset_index()
+            
+            fig3 = go.Figure()
+            fig3.add_trace(go.Scatter(
+                x=business_daily['date'],
+                y=business_daily['orders'],
+                mode='lines+markers',
+                name='📦 Orders',
+                line=dict(color='#45b7d1', width=3),
+                marker=dict(size=6, color='#45b7d1', line=dict(width=2, color='white')),
+                fill='tozeroy',
+                fillcolor='rgba(69, 183, 209, 0.1)'
+            ))
+            fig3.add_trace(go.Scatter(
+                x=business_daily['date'],
+                y=business_daily['gross profit'],
+                mode='lines+markers',
+                name='💎 Profit',
+                line=dict(color='#96ceb4', width=3),
+                marker=dict(size=6, color='#96ceb4', line=dict(width=2, color='white')),
+                yaxis='y2'
+            ))
+            
+            fig3.update_layout(
+                title='📊 Orders & Profit Performance',
+                xaxis_title='📅 Date',
+                yaxis_title='📦 Orders',
+                yaxis2=dict(title='💎 Profit ($)', overlaying='y', side='right'),
+                height=400,
+                hovermode='x unified'
+            )
+        else:
+            # Create alternative chart if orders/profit data not available
+            clicks_impressions = filtered_df.groupby('date').agg({
+                'clicks': 'sum',
+                'impressions': 'sum'
+            }).reset_index()
+            
+            fig3 = go.Figure()
+            fig3.add_trace(go.Scatter(
+                x=clicks_impressions['date'],
+                y=clicks_impressions['clicks'],
+                mode='lines+markers',
+                name='🖱️ Clicks',
+                line=dict(color='#45b7d1', width=3),
+                marker=dict(size=6, color='#45b7d1', line=dict(width=2, color='white'))
+            ))
+            fig3.add_trace(go.Scatter(
+                x=clicks_impressions['date'],
+                y=clicks_impressions['impressions'],
+                mode='lines+markers',
+                name='👀 Impressions',
+                line=dict(color='#96ceb4', width=3),
+                marker=dict(size=6, color='#96ceb4', line=dict(width=2, color='white')),
+                yaxis='y2'
+            ))
+            
+            fig3.update_layout(
+                title='📊 Clicks & Impressions Performance',
+                xaxis_title='📅 Date',
+                yaxis_title='🖱️ Clicks',
+                yaxis2=dict(title='👀 Impressions', overlaying='y', side='right'),
+                height=400,
+                hovermode='x unified'
+            )
         
-        fig3 = go.Figure()
-        fig3.add_trace(go.Scatter(
-            x=business_daily['date'],
-            y=business_daily['orders'],
-            mode='lines+markers',
-            name='📦 Orders',
-            line=dict(color='#45b7d1', width=3),
-            marker=dict(size=6, color='#45b7d1', line=dict(width=2, color='white')),
-            fill='tonexty' if len(fig3.data) > 0 else 'tozeroy',
-            fillcolor='rgba(69, 183, 209, 0.1)'
-        ))
-        fig3.add_trace(go.Scatter(
-            x=business_daily['date'],
-            y=business_daily['gross profit'],
-            mode='lines+markers',
-            name='💎 Profit',
-            line=dict(color='#96ceb4', width=3),
-            marker=dict(size=6, color='#96ceb4', line=dict(width=2, color='white')),
-            yaxis='y2'
-        ))
-        
-        fig3.update_layout(
-            title='📊 Orders & Profit Performance',
-            xaxis_title='📅 Date',
-            yaxis_title='📦 Orders',
-            yaxis2=dict(title='💎 Profit ($)', overlaying='y', side='right'),
-            height=400,
-            hovermode='x unified'
-        )
-        
-        create_modern_chart(fig3, "Orders & Profit Performance", "📊")
+        create_modern_chart(fig3, "Performance Metrics", "📊")
     
     with col4:
         # Enhanced Spend Distribution
@@ -676,7 +874,7 @@ def main():
         total_impressions = filtered_df['impressions'].sum()
         total_clicks = filtered_df['clicks'].sum()
         overall_ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
-        overall_roas = filtered_df['attributed_revenue'].sum() / filtered_df['spend'].sum()
+        overall_roas = filtered_df['attributed_revenue'].sum() / filtered_df['spend'].sum() if filtered_df['spend'].sum() > 0 else 0
         
         with perf_col1:
             st.metric("👀 Total Impressions", f"{total_impressions:,}")
@@ -689,15 +887,26 @@ def main():
     
     with tab3:
         st.markdown("### 🔍 Detailed Raw Data")
-        display_columns = ['date', 'channel', 'campaign', 'spend', 'impressions', 
-                          'clicks', 'attributed_revenue', 'orders', 'total revenue', 
-                          'gross profit', 'CTR', 'ROAS']
+        display_columns = ['date', 'channel', 'spend', 'impressions', 'clicks', 'attributed_revenue', 'CTR', 'ROAS']
         
-        # Add search and filter options
+        # Filter to only existing columns
+        available_columns = [col for col in display_columns if col in filtered_df.columns]
+        
+        # Add campaign column if it exists
+        if 'campaign' in filtered_df.columns:
+            available_columns.insert(2, 'campaign')
+        
+        # Add business metrics if they exist
+        business_columns = ['orders', 'total revenue', 'gross profit']
+        for col in business_columns:
+            if col in filtered_df.columns:
+                available_columns.append(col)
+        
+        # Add search functionality
         search_term = st.text_input("🔍 Search campaigns:", placeholder="Enter campaign name...")
         
-        display_df = filtered_df[display_columns].copy()
-        if search_term:
+        display_df = filtered_df[available_columns].copy()
+        if search_term and 'campaign' in display_df.columns:
             display_df = display_df[display_df['campaign'].str.contains(search_term, case=False, na=False)]
         
         st.dataframe(
@@ -719,24 +928,37 @@ def main():
         st.markdown("### 💡 Automated Insights")
         
         # Generate automatic insights
-        best_channel = channel_roas.loc[channel_roas['ROAS'].idxmax(), 'channel']
-        best_roas = channel_roas.loc[channel_roas['ROAS'].idxmax(), 'ROAS']
-        
-        worst_channel = channel_roas.loc[channel_roas['ROAS'].idxmin(), 'channel']
-        worst_roas = channel_roas.loc[channel_roas['ROAS'].idxmin(), 'ROAS']
-        
-        total_roi = (filtered_df['attributed_revenue'].sum() - filtered_df['spend'].sum()) / filtered_df['spend'].sum() * 100
-        
-        insights = [
-            f"🏆 **Best Performing Channel**: {best_channel} with {best_roas:.2f}x ROAS",
-            f"⚠️ **Lowest Performing Channel**: {worst_channel} with {worst_roas:.2f}x ROAS",
-            f"💰 **Overall ROI**: {total_roi:.1f}% return on marketing investment",
-            f"📊 **Efficiency Score**: {(best_roas/worst_roas-1)*100:.0f}% performance gap between best and worst channels"
-        ]
-        
-        for insight in insights:
-            st.markdown(insight)
-            st.markdown("---")
+        if len(channel_roas) > 1:
+            best_channel = channel_roas.loc[channel_roas['ROAS'].idxmax(), 'channel']
+            best_roas = channel_roas.loc[channel_roas['ROAS'].idxmax(), 'ROAS']
+            
+            worst_channel = channel_roas.loc[channel_roas['ROAS'].idxmin(), 'channel']
+            worst_roas = channel_roas.loc[channel_roas['ROAS'].idxmin(), 'ROAS']
+            
+            total_spend_sum = filtered_df['spend'].sum()
+            total_revenue_sum = filtered_df['attributed_revenue'].sum()
+            total_roi = ((total_revenue_sum - total_spend_sum) / total_spend_sum * 100) if total_spend_sum > 0 else 0
+            
+            insights = [
+                f"🏆 **Best Performing Channel**: {best_channel} with {best_roas:.2f}x ROAS",
+                f"⚠️ **Lowest Performing Channel**: {worst_channel} with {worst_roas:.2f}x ROAS",
+                f"💰 **Overall ROI**: {total_roi:.1f}% return on marketing investment",
+                f"📊 **Performance Gap**: {((best_roas/worst_roas-1)*100):.0f}% difference between best and worst channels"
+            ]
+            
+            for insight in insights:
+                st.markdown(insight)
+                st.markdown("---")
+        else:
+            st.info("📊 Upload multiple channel data to see comparative insights.")
+    
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+        <div style="text-align: center; color: #7f8c8d; padding: 1rem;">
+            🚀 Marketing Intelligence Dashboard | Built with Streamlit & Plotly
+        </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
